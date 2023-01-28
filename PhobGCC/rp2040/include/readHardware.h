@@ -78,9 +78,10 @@ void setPinModes() {
 
 	//initialize ADC for triggers
 	adc_init();
+#ifndef ANALOG_TRIGGER_BUTTONS
 	adc_gpio_init(_pinLa);
 	adc_gpio_init(_pinRa);
-
+#endif
 	//initialize DAC outputs
 	gpio_init(_pinDac0);
 	gpio_init(_pinDac1);
@@ -122,6 +123,7 @@ void readADCScale(float &, float ) {
 }
 
 //implement a 3 unit deadzone
+#ifndef ANALOG_TRIGGER_BUTTONS
 int readLa(const Pins &, const int initial, const float scale) {
 	adc_select_input(_pinLadc);
 	float temp = adc_read() / 16.0;
@@ -138,7 +140,7 @@ int readRa(const Pins &, const int initial, const float scale) {
 	}
 	return fmin(255, fmax(0, temp - initial) * scale);
 }
-
+#endif
 /*
 //for external MCP3002 adc, 10 bit
 int __time_critical_func(readExtAdc)(const WhichStick whichStick, const WhichAxis whichAxis) {

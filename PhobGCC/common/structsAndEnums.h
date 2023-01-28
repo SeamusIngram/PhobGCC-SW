@@ -86,6 +86,34 @@ struct Pins{
 	int pinZ;
 	int pinS;
 };
+//Pins for Rectangle with 1 DPAD Button
+// struct Pins{
+
+// 	int pinLS;
+// 	int pinMS;
+
+// 	int pinL;
+// 	int pinR;
+// 	int pinAx;
+// 	int pinAy;
+
+// 	int pinCr;
+// 	int pinCu;
+// 	int pinCl;
+// 	int pinCd;
+
+// 	int pinRX;
+// 	int pinTX;
+
+// 	int pinD;
+
+// 	int pinX;
+// 	int pinY;
+// 	int pinA;
+// 	int pinB;
+// 	int pinZ;
+// 	int pinS;
+// };
 
 union Buttons{
 	uint8_t arr[10];

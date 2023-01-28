@@ -18,7 +18,8 @@ using std::max;
 //#include "../teensy/Phob1_1Teensy4_0DiodeShort.h"// For PhobGCC board 1.1 with Teensy 4.0 and the diode shorted
 //#include "../teensy/Phob1_2Teensy4_0.h"          // For PhobGCC board 1.2.x with Teensy 4.0
 //#include "../rp2040/include/PicoProtoboard.h"    // For a protoboard with a Pico on it, used for developing for the RP2040
-//#include "../rp2040/include/Phob2_0.h"           // For PhobGCC Board 2.0 with RP2040
+//include "../rp2040/include/Phob2_0.h"           // For PhobGCC Board 2.0 with RP2040
+#include "../teensy/Phobox_Teensy4_0.h" 
 
 #include "structsAndEnums.h"
 #include "variables.h"
@@ -26,8 +27,8 @@ using std::max;
 #include "stick.h"
 #include "../extras/extras.h"
 
-#define BUILD_RELEASE
-//#define BUILD_DEV
+//#define BUILD_RELEASE
+#define BUILD_DEV
 
 //This is just an integer.
 #define SW_VERSION 28
@@ -105,20 +106,36 @@ FilterGains _gains {//these values are for 800 hz, recomputeGains converts them 
 FilterGains _normGains;//this gets filled by recomputeGains();
 
 Pins _pinList {
+#ifndef ANALOG_TRIGGER_BUTTONS
 	.pinLa = _pinLa,
 	.pinRa = _pinRa,
+#else
+	.pinLS = _pinLS,
+	.pinMS = _pinMS,
+#endif
 	.pinL  = _pinL,
 	.pinR  = _pinR,
 	.pinAx = _pinAx,
 	.pinAy = _pinAy,
+#ifndef C_BUTTONS
 	.pinCx = _pinCx,
 	.pinCy = _pinCy,
+#else
+	.pinCr = _pinCr,
+	.pinCu = _pinCu,
+	.pinCl = _pinCl,
+	.pinCd = _pinCd,
+#endif
 	.pinRX = _pinRX,
 	.pinTX = _pinTX,
+#ifndef DPAD_BUTTON
 	.pinDr = _pinDr,
 	.pinDu = _pinDu,
 	.pinDl = _pinDl,
 	.pinDd = _pinDd,
+#else
+	.pinD  = _pinD,
+#endif
 	.pinX  = _pinX,
 	.pinY  = _pinY,
 	.pinA  = _pinA,
@@ -841,10 +858,12 @@ void initializeButtons(const Pins &pin, Buttons &btn,int &startUpLa, int &startU
 	//these values could be used as offsets to set particular trigger values
 	startUpLa = 0;
 	startUpRa = 0;
+	#ifndef ANALOG_TRIGGER_BUTTONS
 	for(int i = 0; i <64; i++){
 		startUpLa = max(startUpLa,readLa(pin, 0, 1));
 		startUpRa = max(startUpRa,readRa(pin, 0, 1));
 	}
+	#endif
 	//set the trigger values to this measured startup value
 	btn.La = 0;
 	btn.Ra = 0;
@@ -1494,69 +1513,7 @@ void calibrationUndo(int &currentCalStep, const WhichStick whichStick, NotchStat
 }
 
 void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const WhichStick whichStick, float tempCalPointsX[], float tempCalPointsY[], bool &undoCal, float notchAngles[], NotchStatus notchStatus[], float measuredNotchAngles[], StickParams &aStickParams, StickParams &cStickParams) {
-	if(whichStick == CSTICK){
-		if(currentCalStep < _noOfCalibrationPoints){//still collecting points
-			readADCScale(_ADCScale, _ADCScaleFactor);
-			float X = 0;
-			float Y = 0;
-			for(int i=0; i<128; i++) {
-				X += readCx(_pinList)/4096.0*_ADCScale;
-				Y += readCy(_pinList)/4096.0*_ADCScale;
-			}
-			X /= 128.0;
-			Y /= 128.0;
-			insertCalPoints(whichStick, currentCalStep, tempCalPointsX, tempCalPointsY, _pinList, X, Y);
-		}
-		currentCalStep ++;
-		if(currentCalStep >= 2 && currentCalStep != _noOfNotches*2) {//don't undo at the beginning of collection or notch adjust
-			undoCal = true;
-		} else {
-			undoCal = false;
-		}
-		if(currentCalStep == _noOfCalibrationPoints){//done collecting points
-			//bring all notches into a legal range; this helps recover from freakout situations
-			legalizeNotches(currentCalStep, measuredNotchAngles, notchAngles, notchStatus);
-			applyCalFromPoints(whichStick, notchAngles, tempCalPointsX, tempCalPointsY, notchStatus, measuredNotchAngles, cStickParams);
-		}
-		int notchIndex = _notchAdjOrder[min(currentCalStep-_noOfCalibrationPoints, _noOfAdjNotches-1)];//limit this so it doesn't access outside the array bounds
-		while((currentCalStep >= _noOfCalibrationPoints) && (notchStatus[notchIndex] == TERT_INACTIVE) && (currentCalStep < _noOfCalibrationPoints + _noOfAdjNotches)){//this non-diagonal notch was not calibrated
-			legalizeNotches(currentCalStep, measuredNotchAngles, notchAngles, notchStatus);
-			//skip to the next valid notch
-			currentCalStep++;
-			notchIndex = _notchAdjOrder[min(currentCalStep-_noOfCalibrationPoints, _noOfAdjNotches-1)];//limit this so it doesn't access outside the array bounds
-		}
-		if(currentCalStep >= _noOfCalibrationPoints + _noOfAdjNotches){//done adjusting notches
-#ifdef ARDUINO
-			Serial.println("finished adjusting notches for the C stick");
-#endif //ARDUINO
-			setPointsSetting(tempCalPointsX, whichStick, XAXIS);
-			setPointsSetting(tempCalPointsY, whichStick, YAXIS);
-			setNotchAnglesSetting(notchAngles, whichStick);
-			controls.autoInit = 0;
-			setAutoInitSetting(controls.autoInit);
-#ifdef BATCHSETTINGS
-			commitSettings();
-#endif //BATCHSETTINGS
-#ifdef ARDUINO
-			Serial.println("calibration points stored in EEPROM");
-#endif //ARDUINO
-			float cleanedPointsX[_noOfNotches+1];
-			float cleanedPointsY[_noOfNotches+1];
-			float notchPointsX[_noOfNotches+1];
-			float notchPointsY[_noOfNotches+1];
-			cleanCalPoints(tempCalPointsX, tempCalPointsY, notchAngles, cleanedPointsX, cleanedPointsY, notchPointsX, notchPointsY, notchStatus);
-#ifdef ARDUINO
-			Serial.println("calibration points cleaned");
-#endif //ARDUINO
-			linearizeCal(cleanedPointsX, cleanedPointsY, cleanedPointsX, cleanedPointsY, cStickParams);
-#ifdef ARDUINO
-			Serial.println("C stick linearized");
-#endif //ARDUINO
-			notchCalibrate(cleanedPointsX, cleanedPointsY, notchPointsX, notchPointsY, _noOfNotches, cStickParams);
-			currentCalStep = -1;
-		}
-	}
-	else if (whichStick == ASTICK){
+	if (whichStick == ASTICK){
 #ifdef ARDUINO
 		Serial.println("Current step:");
 		Serial.println(currentCalStep);
@@ -1622,18 +1579,82 @@ void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const Whic
 			currentCalStep = -1;
 		}
 	}
+#ifndef C_BUTTONS
+	else if(whichStick == CSTICK){
+		if(currentCalStep < _noOfCalibrationPoints){//still collecting points
+			readADCScale(_ADCScale, _ADCScaleFactor);
+			float X = 0;
+			float Y = 0;
+			for(int i=0; i<128; i++) {
+				X += readCx(_pinList)/4096.0*_ADCScale;
+				Y += readCy(_pinList)/4096.0*_ADCScale;
+			}
+			X /= 128.0;
+			Y /= 128.0;
+			insertCalPoints(whichStick, currentCalStep, tempCalPointsX, tempCalPointsY, _pinList, X, Y);
+		}
+		currentCalStep ++;
+		if(currentCalStep >= 2 && currentCalStep != _noOfNotches*2) {//don't undo at the beginning of collection or notch adjust
+			undoCal = true;
+		} else {
+			undoCal = false;
+		}
+		if(currentCalStep == _noOfCalibrationPoints){//done collecting points
+			//bring all notches into a legal range; this helps recover from freakout situations
+			legalizeNotches(currentCalStep, measuredNotchAngles, notchAngles, notchStatus);
+			applyCalFromPoints(whichStick, notchAngles, tempCalPointsX, tempCalPointsY, notchStatus, measuredNotchAngles, cStickParams);
+		}
+		int notchIndex = _notchAdjOrder[min(currentCalStep-_noOfCalibrationPoints, _noOfAdjNotches-1)];//limit this so it doesn't access outside the array bounds
+		while((currentCalStep >= _noOfCalibrationPoints) && (notchStatus[notchIndex] == TERT_INACTIVE) && (currentCalStep < _noOfCalibrationPoints + _noOfAdjNotches)){//this non-diagonal notch was not calibrated
+			legalizeNotches(currentCalStep, measuredNotchAngles, notchAngles, notchStatus);
+			//skip to the next valid notch
+			currentCalStep++;
+			notchIndex = _notchAdjOrder[min(currentCalStep-_noOfCalibrationPoints, _noOfAdjNotches-1)];//limit this so it doesn't access outside the array bounds
+		}
+		if(currentCalStep >= _noOfCalibrationPoints + _noOfAdjNotches){//done adjusting notches
+#ifdef ARDUINO
+			Serial.println("finished adjusting notches for the C stick");
+#endif //ARDUINO
+			setPointsSetting(tempCalPointsX, whichStick, XAXIS);
+			setPointsSetting(tempCalPointsY, whichStick, YAXIS);
+			setNotchAnglesSetting(notchAngles, whichStick);
+			controls.autoInit = 0;
+			setAutoInitSetting(controls.autoInit);
+#ifdef BATCHSETTINGS
+			commitSettings();
+#endif //BATCHSETTINGS
+#ifdef ARDUINO
+			Serial.println("calibration points stored in EEPROM");
+#endif //ARDUINO
+			float cleanedPointsX[_noOfNotches+1];
+			float cleanedPointsY[_noOfNotches+1];
+			float notchPointsX[_noOfNotches+1];
+			float notchPointsY[_noOfNotches+1];
+			cleanCalPoints(tempCalPointsX, tempCalPointsY, notchAngles, cleanedPointsX, cleanedPointsY, notchPointsX, notchPointsY, notchStatus);
+#ifdef ARDUINO
+			Serial.println("calibration points cleaned");
+#endif //ARDUINO
+			linearizeCal(cleanedPointsX, cleanedPointsY, cleanedPointsX, cleanedPointsY, cStickParams);
+#ifdef ARDUINO
+			Serial.println("C stick linearized");
+#endif //ARDUINO
+			notchCalibrate(cleanedPointsX, cleanedPointsY, notchPointsX, notchPointsY, _noOfNotches, cStickParams);
+			currentCalStep = -1;
+		}
+	}
+#endif
 }
 
 void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &controls, FilterGains &gains, FilterGains &normGains, int &currentCalStep, bool &running, float tempCalPointsX[], float tempCalPointsY[], WhichStick &whichStick, NotchStatus notchStatus[], float notchAngles[], float measuredNotchAngles[], StickParams &aStickParams, StickParams &cStickParams){
 	//Gather the button data from the hardware
 	readButtons(pin, hardware);
+#ifndef ANALOG_TRIGGER_BUTTONS
 	hardware.La = (uint8_t) readLa(pin, controls.lTrigInitial, 1);
 	hardware.Ra = (uint8_t) readRa(pin, controls.rTrigInitial, 1);
-
+#endif
 	//Copy hardware buttons into a temp
 	Buttons tempBtn;
 	copyButtons(hardware, tempBtn);
-
 	//Swap buttons here for jump remapping
 	applyJump(controls, hardware, tempBtn);
 
@@ -1644,6 +1665,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 	//when a trigger is in lockout due to the other being mode 5,
 	// modes 1, 3, and 4 will have no output on that trigger to warn the user.
 	//(the above modes are 1-indexed, user-facing values)
+#ifndef ANALOG_TRIGGER_BUTTONS
 	const bool lockoutL = controls.rConfig == 4 && (controls.lConfig != 1 && controls.lConfig != 4 && controls.lConfig != 5);
 	const bool lockoutR = controls.lConfig == 4 && (controls.rConfig != 1 && controls.rConfig != 4 && controls.rConfig != 5);
 
@@ -1734,6 +1756,10 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 		tempBtn.R  = (uint8_t) 0;
 		tempBtn.Ra = (uint8_t) 0;
 	}
+#else
+			tempBtn.La = !digitalRead(pin.pinL)? 140: !digitalRead(pin.pinMS)? 94 : !digitalRead(pin.pinLS)? 49: 0;
+			tempBtn.Ra = !digitalRead(pin.pinR)? 140 : 0;
+#endif
 
 	//Apply any further button remapping to tempBtn here
 
@@ -1866,7 +1892,9 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			currentCalStep ++;
 			advanceCal = true;
 			freezeSticks(2000, btn, hardware);
-		} else if (hardware.A && hardware.X && hardware.Y && hardware.R) { //C-stick Calibration
+		}
+#ifndef C_BUTTONS 
+		else if (hardware.A && hardware.X && hardware.Y && hardware.R) { //C-stick Calibration
 #ifdef ARDUINO
 			Serial.println("Calibrating the C stick");
 #endif //ARDUINO
@@ -1874,7 +1902,9 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			currentCalStep ++;
 			advanceCal = true;
 			freezeSticks(2000, btn, hardware);
-		} else if(hardware.A && hardware.X && !hardware.Z && hardware.Du) { //Increase Analog X-Axis Snapback Filtering
+		} 
+#endif
+		else if(hardware.A && hardware.X && !hardware.Z && hardware.Du) { //Increase Analog X-Axis Snapback Filtering
 			adjustSnapback(XAXIS, INCREASE, btn, hardware, controls, gains, normGains);
 		} else if(hardware.A && hardware.X && !hardware.Z && hardware.Dd) { //Decrease Analog X-Axis Snapback Filtering
 			adjustSnapback(XAXIS, DECREASE, btn, hardware, controls, gains, normGains);
@@ -1900,6 +1930,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			adjustSmoothing(YAXIS, DECREASE, btn, hardware, controls, gains, normGains);
 		} else if(hardware.L && hardware.S && !hardware.A && !hardware.R && !hardware.X && !hardware.Y) { //Show Current Analog Settings (ignore L jump and L trigger toggle and LRAS)
 			showAstickSettings(btn, hardware, controls, gains);
+#ifndef C_BUTTONS 
 		} else if(hardware.A && hardware.X && hardware.Z && hardware.Du) { //Increase C-stick X-Axis Snapback Filtering
 			adjustCstickSmoothing(XAXIS, INCREASE, btn, hardware, controls, gains, normGains);
 		} else if(hardware.A && hardware.X && hardware.Z && hardware.Dd) { //Decrease C-stick X-Axis Snapback Filtering
@@ -1926,6 +1957,8 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			adjustCstickOffset(YAXIS, DECREASE, btn, hardware, controls);
 		} else if(hardware.R && hardware.S && !hardware.A && !hardware.L && !hardware.X && !hardware.Y) { //Show Current C-stick Settings (ignore R jump and R trigger toggle and LRAS)
 			showCstickSettings(btn, hardware, controls, gains);
+#endif
+#ifndef ANALOG_TRIGGER_BUTTONS
 		} else if(hardware.A && hardware.B && hardware.L) { //Toggle Analog L
 			nextTriggerState(LTRIGGER, btn, hardware, controls);
 		} else if(hardware.A && hardware.B && hardware.R) { //Toggle Analog R
@@ -1938,6 +1971,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			adjustTriggerOffset(RTRIGGER, INCREASE, btn, hardware, controls);
 		} else if(hardware.R && hardware.B && hardware.Dd) { //Decrease R-trigger Offset
 			adjustTriggerOffset(RTRIGGER, DECREASE, btn, hardware, controls);
+#endif
 		} else if(hardware.X && hardware.Z && hardware.S) { //Swap X and Z
 			setJumpConfig(SWAP_XZ, controls);
 			freezeSticks(2000, btn, hardware);
@@ -2047,16 +2081,20 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	uint32_t adcCount = 0;
 	uint32_t aXSum = 0;
 	uint32_t aYSum = 0;
+#ifndef C_BUTTONS
 	uint32_t cXSum = 0;
 	uint32_t cYSum = 0;
+#endif
 	uint32_t beforeMicros = micros();
 	uint32_t afterMicros;
 	do{
 		adcCount++;
 		aXSum += readAx(pin);
 		aYSum += readAy(pin);
+	#ifndef C_BUTTONS
 		cXSum += readCx(pin);
 		cYSum += readCy(pin);
+	#endif
 		afterMicros = micros();
 		adcDelta = afterMicros-beforeMicros;
 		beforeMicros = afterMicros;
@@ -2071,8 +2109,10 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	//Serial.println(adcCount);
 	float aStickX = aXSum/(float)adcCount/4096.0*_ADCScale;
 	float aStickY = aYSum/(float)adcCount/4096.0*_ADCScale;
+#ifndef C_BUTTONS
 	float cStickX = cXSum/(float)adcCount/4096.0*_ADCScale;
 	float cStickY = cYSum/(float)adcCount/4096.0*_ADCScale;
+#endif
 #else //CLEANADC: read only once
 	float aStickX = readAx(pin)/4096.0;
 	float aStickY = readAy(pin)/4096.0;
@@ -2098,9 +2138,10 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	}
 	_raw.axRaw = aStickX;
 	_raw.ayRaw = aStickY;
+#ifndef C_BUTTONS
 	_raw.cxRaw = cStickX;
 	_raw.cyRaw = cStickY;
-
+#endif
 	//create the measurement value to be used in the kalman filter
 	float xZ;
 	float yZ;
@@ -2108,18 +2149,19 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	//linearize the analog stick inputs by multiplying by the coefficients found during calibration (3rd order fit)
 	xZ = linearize(aStickX, aStickParams.fitCoeffsX);
 	yZ = linearize(aStickY, aStickParams.fitCoeffsY);
-
+#ifndef C_BUTTONS
 	float posCx = linearize(cStickX, cStickParams.fitCoeffsX);
 	float posCy = linearize(cStickY, cStickParams.fitCoeffsY);
-
+#endif
 	float posAx = xZ;
 	float posAy = yZ;
 
 	_raw.axLinearized = posAx;
 	_raw.ayLinearized = posAy;
+#ifndef C_BUTTONS
 	_raw.cxLinearized = posCx;
 	_raw.cyLinearized = posCy;
-
+#endif
 	//Run the kalman filter to eliminate snapback
 	static float xPosFilt = 0;//output of kalman filter
 	static float yPosFilt = 0;//output of kalman filter
@@ -2138,6 +2180,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	oldPosAx = posAx;
 	oldPosAy = posAy;
 
+#ifndef C_BUTTONS
 	//Run waveshaping on the c-stick
 	cRunWaveShaping(posCx, posCy, posCx, posCy, controls, normGains);
 
@@ -2158,7 +2201,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 
 	posCx = cXPos;
 	posCy = cYPos;
-
+#endif
 	//Run a median filter to reduce noise
 #ifdef USEMEDIAN
 	static float xPosList[MEDIANLEN] = MEDIANARRAY;//for median filtering;
@@ -2171,26 +2214,29 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 
 	float remappedAx;
 	float remappedAy;
-	float remappedCx;
-	float remappedCy;
 	float remappedAxUnfiltered;
 	float remappedAyUnfiltered;
+	notchRemap(posAx, posAy, &remappedAx, &remappedAy, _noOfNotches, aStickParams, currentCalStep);
+	notchRemap(_raw.axLinearized, _raw.ayLinearized, &remappedAxUnfiltered, &remappedAyUnfiltered, _noOfNotches, aStickParams, 1);//no snapping
+#ifndef C_BUTTONS
+	float remappedCx;
+	float remappedCy;
 	float remappedCxUnfiltered;
 	float remappedCyUnfiltered;
-	notchRemap(posAx, posAy, &remappedAx, &remappedAy, _noOfNotches, aStickParams, currentCalStep);
 	notchRemap(posCx, posCy, &remappedCx, &remappedCy, _noOfNotches, cStickParams, currentCalStep);
-	notchRemap(_raw.axLinearized, _raw.ayLinearized, &remappedAxUnfiltered, &remappedAyUnfiltered, _noOfNotches, aStickParams, 1);//no snapping
 	notchRemap(_raw.cxLinearized, _raw.cyLinearized, &remappedCxUnfiltered, &remappedCyUnfiltered, _noOfNotches, cStickParams, 1);//no snapping
-
+#endif
 	//Clamp values from -125 to +125
 	remappedAx = fmin(125, fmax(-125, remappedAx));
 	remappedAy = fmin(125, fmax(-125, remappedAy));
-	remappedCx = fmin(125, fmax(-125, remappedCx+controls.cXOffset));
-	remappedCy = fmin(125, fmax(-125, remappedCy+controls.cYOffset));
 	_raw.axUnfiltered = fmin(125, fmax(-125, remappedAxUnfiltered));
 	_raw.ayUnfiltered = fmin(125, fmax(-125, remappedAyUnfiltered));
+#ifndef C_BUTTONS
+	remappedCx = fmin(125, fmax(-125, remappedCx+controls.cXOffset));
+	remappedCy = fmin(125, fmax(-125, remappedCy+controls.cYOffset));
 	_raw.cxUnfiltered = fmin(125, fmax(-125, remappedCxUnfiltered+controls.cXOffset));
 	_raw.cyUnfiltered = fmin(125, fmax(-125, remappedCyUnfiltered+controls.cYOffset));
+#endif
 
 	bool skipAHyst = false;
 #ifdef EXTRAS_ESS
@@ -2216,6 +2262,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 		}
 	}
 	if(readC){
+	#ifndef C_BUTTONS
 		float diffCx = (remappedCx+_floatOrigin)-btn.Cx;
 		if( (diffCx > (1.0 + hystVal)) || (diffCx < -hystVal) ){
 			btn.Cx = (uint8_t) (remappedCx+_floatOrigin);
@@ -2224,6 +2271,9 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 		if( (diffCy > (1.0 + hystVal)) || (diffCy < -hystVal) ){
 			btn.Cy = (uint8_t) (remappedCy+_floatOrigin);
 		}
+	#else
+		readCButtons(pin, btn);
+	#endif
 	}
 };
 
