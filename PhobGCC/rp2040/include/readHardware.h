@@ -22,6 +22,7 @@ void setPinModes() {
 	gpio_init(_pinB);
 	gpio_pull_up(_pinB);
 	gpio_set_dir(_pinB, GPIO_IN);
+#ifndef DPAD_BUTTON
 	gpio_init(_pinDr);
 	gpio_pull_up(_pinDr);
 	gpio_set_dir(_pinDr, GPIO_IN);
@@ -34,6 +35,11 @@ void setPinModes() {
 	gpio_init(_pinDd);
 	gpio_pull_up(_pinDd);
 	gpio_set_dir(_pinDd, GPIO_IN);
+#else
+	gpio_init(_pinD);
+	gpio_pull_up(_pinD);
+	gpio_set_dir(_pinD, GPIO_IN);
+#endif
 	gpio_init(_pinL);
 	gpio_pull_up(_pinL);
 	gpio_set_dir(_pinL, GPIO_IN);
@@ -52,6 +58,28 @@ void setPinModes() {
 	gpio_init(_pinS);
 	gpio_pull_up(_pinS);
 	gpio_set_dir(_pinS, GPIO_IN);
+#ifdef C_BUTTONS
+	gpio_init(_pinCr);
+	gpio_pull_up(_pinCr);
+	gpio_set_dir(_pinCr, GPIO_IN);
+	gpio_init(_pinCu);
+	gpio_pull_up(_pinCu);
+	gpio_set_dir(_pinCu, GPIO_IN);
+	gpio_init(_pinCl);
+	gpio_pull_up(_pinCl);
+	gpio_set_dir(_pinCl, GPIO_IN);
+	gpio_init(_pinCd);
+	gpio_pull_up(_pinCd);
+	gpio_set_dir(_pinCd, GPIO_IN);
+#endif
+#ifdef ANALOG_TRIGGER_BUTTONS
+	gpio_init(_pinLS);
+	gpio_pull_up(_pinLS);
+	gpio_set_dir(_pinLS, GPIO_IN);
+	gpio_init(_pinMS);
+	gpio_pull_up(_pinMS);
+	gpio_set_dir(_pinMS, GPIO_IN);
+#endif
 
 	/* the comms library sets this
 	gpio_init(_pinTx);
@@ -72,13 +100,14 @@ void setPinModes() {
 	gpio_init(_pinAcs);
 	gpio_set_dir(_pinAcs, GPIO_OUT);
 	gpio_put(_pinAcs, 1);//active low
+#ifndef C_BUTTONS
 	gpio_init(_pinCcs);
 	gpio_set_dir(_pinCcs, GPIO_OUT);
 	gpio_put(_pinCcs, 1);//active low
-
+#endif
 	//initialize ADC for triggers
-	adc_init();
 #ifndef ANALOG_TRIGGER_BUTTONS
+	adc_init();
 	adc_gpio_init(_pinLa);
 	adc_gpio_init(_pinRa);
 #endif
@@ -112,10 +141,17 @@ void readButtons(const Pins &, Buttons &hardware) {
 	hardware.R  = !gpio_get(_pinR);
 	hardware.Z  = !gpio_get(_pinZ);
 	hardware.S  = !gpio_get(_pinS);
+#ifndef DPAD_BUTTON
 	hardware.Dr = !gpio_get(_pinDr);
 	hardware.Du = !gpio_get(_pinDu);
 	hardware.Dl = !gpio_get(_pinDl);
 	hardware.Dd = !gpio_get(_pinDd);
+#else
+	hardware.Dr = !gpio_get(_pinD) & !gpio_get(_pinCr);
+	hardware.Du = !gpio_get(_pinD) & !gpio_get(_pinCu);
+	hardware.Dl = !gpio_get(_pinD) & !gpio_get(_pinCl);
+	hardware.Dd = !gpio_get(_pinD) & !gpio_get(_pinCd);
+#endif
 }
 
 void readADCScale(float &, float ) {
@@ -139,6 +175,11 @@ int readRa(const Pins &, const int initial, const float scale) {
 		temp = 0.0f;
 	}
 	return fmin(255, fmax(0, temp - initial) * scale);
+}
+#else
+void readAnalogTriggerButtons(const Pins &, Buttons &hardware){
+	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS)? 94 : !gpio_get(_pinLS)? 49: 0;
+	hardware.Ra = !gpio_get(_pinR)? 140 : 0;
 }
 #endif
 /*
@@ -202,10 +243,14 @@ int __time_critical_func(readExtAdc)(const WhichStick whichStick, const WhichAxi
 	if(whichStick == ASTICK) {
 		//left stick
 		gpio_put(_pinAcs, 0);
-	} else {
+
+	}
+#ifndef C_BUTTONS 
+	else {
 		//c-stick
 		gpio_put(_pinCcs, 0);
 	}
+#endif
 	//asm volatile("nop \n nop \n nop");
 
 	spi_read_blocking(spi0, *configBits, buf, 3);
@@ -214,9 +259,12 @@ int __time_critical_func(readExtAdc)(const WhichStick whichStick, const WhichAxi
 	//asm volatile("nop \n nop \n nop");
 	if(whichStick == ASTICK) {
 		gpio_put(_pinAcs, 1);
-	} else {
+	} 
+#ifndef C_BUTTONS 
+	else {
 		gpio_put(_pinCcs, 1);
 	}
+#endif
 	//asm volatile("nop \n nop \n nop");
 
 	return tempValue;
@@ -228,12 +276,61 @@ int readAx(const Pins &) {
 int readAy(const Pins &) {
 	return readExtAdc(ASTICK, YAXIS);
 }
+#ifndef C_BUTTONS
 int readCx(const Pins &) {
 	return readExtAdc(CSTICK, XAXIS);
 }
 int readCy(const Pins &) {
 	return readExtAdc(CSTICK, YAXIS);
 }
+#else
+void readCButtons(const Pins &, Buttons &hardware) {
+	bool cUp = !gpio_get(_pinCu);
+	bool cLeft = !gpio_get(_pinCl);
+	bool cVertical = !gpio_get(_pinCu) != !gpio_get(_pinCd);
+  bool cHorizontal = !gpio_get(_pinCl) != !gpio_get(_pinCr);
+	if (!gpio_get(_pinD)){
+		hardware.Cx = (uint8_t) 128;
+		hardware.Cy = (uint8_t) 128;
+	}
+	else if (cVertical & cHorizontal){
+		if (cLeft){
+			hardware.Cx = (uint8_t) 86;
+		}
+		else{
+			hardware.Cx = (uint8_t) 170;
+		}
+		if (cUp){
+			hardware.Cy = (uint8_t) 196;
+		}
+		else{
+			hardware.Cy = (uint8_t) 60;
+		}
+	} 
+	else if (cHorizontal){
+		hardware.Cy = (uint8_t) 128;
+		if (cLeft){
+			hardware.Cx = (uint8_t) 0;
+		}
+		else{
+			hardware.Cx = (uint8_t) 255;
+		}
+	} 
+	else if (cVertical){
+		hardware.Cx = (uint8_t) 128;
+		if (cUp){
+			hardware.Cy = (uint8_t) 255;
+		}
+		else{
+			hardware.Cy = (uint8_t) 0;
+		}
+	} 
+  else{
+		hardware.Cx = (uint8_t) 128;
+		hardware.Cy = (uint8_t) 128;
+	}
+}
+#endif
 
 uint32_t micros() {
 	return time_us_64();

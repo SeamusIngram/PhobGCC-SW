@@ -19,7 +19,8 @@ using std::max;
 //#include "../teensy/Phob1_2Teensy4_0.h"          // For PhobGCC board 1.2.x with Teensy 4.0
 //#include "../rp2040/include/PicoProtoboard.h"    // For a protoboard with a Pico on it, used for developing for the RP2040
 //include "../rp2040/include/Phob2_0.h"           // For PhobGCC Board 2.0 with RP2040
-#include "../teensy/Phobox_Teensy4_0.h" 
+//#include "../teensy/Phobox_Teensy4_0.h"
+#include "../rp2040/include/Phobox_Pico.h"           
 
 #include "structsAndEnums.h"
 #include "variables.h"
@@ -1757,8 +1758,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 		tempBtn.Ra = (uint8_t) 0;
 	}
 #else
-			tempBtn.La = !digitalRead(pin.pinL)? 140: !digitalRead(pin.pinMS)? 94 : !digitalRead(pin.pinLS)? 49: 0;
-			tempBtn.Ra = !digitalRead(pin.pinR)? 140 : 0;
+	readAnalogTriggerButtons(pin,tempBtn);
 #endif
 
 	//Apply any further button remapping to tempBtn here
@@ -2116,8 +2116,10 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 #else //CLEANADC: read only once
 	float aStickX = readAx(pin)/4096.0;
 	float aStickY = readAy(pin)/4096.0;
+#ifndef C_BUTTONS
 	float cStickX = readCx(pin)/4096.0;
 	float cStickY = readCy(pin)/4096.0;
+#endif //C_BUTTONS
 	//note: this actually results in about 0.5 ms delay for the analog sticks
 
 	if(!runSynced) {

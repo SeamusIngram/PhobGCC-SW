@@ -112,6 +112,11 @@ int readRa(const Pins &pin, const int initial, const float scale) {
 	}
 	return (uint8_t) min(255, max(0, temp - initial) * scale);
 }
+#else
+void readAnalogTriggerButtons(const Pins &pin, Buttons &hardware){
+	hardware.La = !digitalRead(pin.pinL)? 140: !digitalRead(pin.pinMS)? 94 : !digitalRead(pin.pinLS)? 49: 0;
+	hardware.Ra = !digitalRead(pin.pinR)? 140 : 0;
+}
 #endif
 //these are native 12-bit
 int readAx(const Pins &pin) {
@@ -145,7 +150,7 @@ void readCButtons(const Pins &pin, Buttons &hardware) {
 			hardware.Cx = (uint8_t) 170;
 		}
 		if (cUp){
-			hardware.Cx = (uint8_t) 86;
+			hardware.Cy = (uint8_t) 196;
 		}
 		else{
 			hardware.Cy = (uint8_t) 60;
