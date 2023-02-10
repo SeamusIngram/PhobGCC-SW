@@ -87,7 +87,7 @@ struct ExtrasConfig{
 // 	int pinZ;
 // 	int pinS;
 // };
-//Pins for Rectangle with 1 DPAD Button running on a Teensy
+//Pins for Rectangle with 1 DPAD Button
 struct Pins{
 
 	int pinLS;

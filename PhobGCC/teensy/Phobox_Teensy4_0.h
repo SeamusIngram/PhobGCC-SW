@@ -11,6 +11,7 @@
 #define DPAD_BUTTON
 #define RECTANGLE
 #define ANALOG_TRIGGER_BUTTONS
+#define MOD_SHIELD
 //#define RUMBLE
 
 //Hardware specific code for half duplex—using one pin for both TX and RX
@@ -48,8 +49,8 @@ const int _pinCu = 19;
 const int _pinCl = 21;
 const int _pinCd = 23;
 const int _pinD = 17;
-const int _pinLS = 0;
-const int _pinMS = 1;
+const int _pinLS = 1;
+const int _pinMS = 0;
 
 //don't #define USEADCSCALE
 

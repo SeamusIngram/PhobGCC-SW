@@ -114,7 +114,11 @@ int readRa(const Pins &pin, const int initial, const float scale) {
 }
 #else
 void readAnalogTriggerButtons(const Pins &pin, Buttons &hardware){
+#ifdef MOD_SHIELD
+	hardware.La = !digitalRead(pin.pinL)? 140: !digitalRead(pin.pinMS) & !digitalRead(pin.pinLS)? 94 : !digitalRead(pin.pinLS)? 49: 0;
+#else
 	hardware.La = !digitalRead(pin.pinL)? 140: !digitalRead(pin.pinMS)? 94 : !digitalRead(pin.pinLS)? 49: 0;
+#endif
 	hardware.Ra = !digitalRead(pin.pinR)? 140 : 0;
 }
 #endif
@@ -134,6 +138,8 @@ int readCy(const Pins &pin) {
 }
 #else
 void readCButtons(const Pins &pin, Buttons &hardware) {
+	bool readDown = hardware.Ay <= 105 ;
+	bool mod = !digitalRead(pin.pinMS);
 	bool cUp = !digitalRead(pin.pinCu);
 	bool cLeft = !digitalRead(pin.pinCl);
 	bool cVertical = !digitalRead(pin.pinCu) != !digitalRead(pin.pinCd);
@@ -157,6 +163,29 @@ void readCButtons(const Pins &pin, Buttons &hardware) {
 		}
 	} 
 	else if (cHorizontal){
+		#ifdef MOD_SHIELD
+		if (mod){
+			if (readDown)
+				hardware.Cy = (uint8_t) 103;
+			else
+				hardware.Cy = (uint8_t) 153;
+			if (cLeft){
+				hardware.Cx = (uint8_t) 61;
+			}
+			else{
+				hardware.Cx = (uint8_t) 195;
+			}
+		}
+		else{
+			hardware.Cy = (uint8_t) 128;
+			if (cLeft){
+				hardware.Cx = (uint8_t) 0;
+			}
+			else{
+				hardware.Cx = (uint8_t) 255;
+			}
+		}
+		#else
 		hardware.Cy = (uint8_t) 128;
 		if (cLeft){
 			hardware.Cx = (uint8_t) 0;
@@ -164,7 +193,8 @@ void readCButtons(const Pins &pin, Buttons &hardware) {
 		else{
 			hardware.Cx = (uint8_t) 255;
 		}
-	} 
+		#endif
+	}
 	else if (cVertical){
 		hardware.Cx = (uint8_t) 128;
 		if (cUp){
