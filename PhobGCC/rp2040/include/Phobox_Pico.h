@@ -13,6 +13,10 @@
 #define ANALOG_TRIGGER_BUTTONS
 #endif
 
+#ifndef MOD_SHIELD
+#define MOD_SHIELD
+#endif
+
 #ifndef RP2040_BOX
 #define RP2040_BOX
 #endif

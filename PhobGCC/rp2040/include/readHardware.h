@@ -178,7 +178,11 @@ int readRa(const Pins &, const int initial, const float scale) {
 }
 #else
 void readAnalogTriggerButtons(const Pins &, Buttons &hardware){
+#ifdef MOD_SHIELD
+	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS) & !gpio_get(_pinLS)? 94 : !gpio_get(_pinLS)? 49: 0;
+#else
 	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS)? 94 : !gpio_get(_pinLS)? 49: 0;
+#endif
 	hardware.Ra = !gpio_get(_pinR)? 140 : 0;
 }
 #endif
@@ -285,6 +289,8 @@ int readCy(const Pins &) {
 }
 #else
 void readCButtons(const Pins &, Buttons &hardware) {
+	bool readDown = hardware.Ay <= 105 ;
+	bool mod = !gpio_get(_pinMS);
 	bool cUp = !gpio_get(_pinCu);
 	bool cLeft = !gpio_get(_pinCl);
 	bool cVertical = !gpio_get(_pinCu) != !gpio_get(_pinCd);
@@ -308,6 +314,29 @@ void readCButtons(const Pins &, Buttons &hardware) {
 		}
 	} 
 	else if (cHorizontal){
+#ifdef MOD_SHIELD
+		if (mod){
+			if (readDown)
+				hardware.Cy = (uint8_t) 103;
+			else
+				hardware.Cy = (uint8_t) 153;
+			if (cLeft){
+				hardware.Cx = (uint8_t) 61;
+			}
+			else{
+				hardware.Cx = (uint8_t) 195;
+			}
+		}
+		else{
+			hardware.Cy = (uint8_t) 128;
+			if (cLeft){
+				hardware.Cx = (uint8_t) 0;
+			}
+			else{
+				hardware.Cx = (uint8_t) 255;
+			}
+		}
+#else
 		hardware.Cy = (uint8_t) 128;
 		if (cLeft){
 			hardware.Cx = (uint8_t) 0;
@@ -315,6 +344,7 @@ void readCButtons(const Pins &, Buttons &hardware) {
 		else{
 			hardware.Cx = (uint8_t) 255;
 		}
+#endif
 	} 
 	else if (cVertical){
 		hardware.Cx = (uint8_t) 128;

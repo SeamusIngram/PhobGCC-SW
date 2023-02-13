@@ -19,8 +19,8 @@ using std::max;
 //#include "../teensy/Phob1_2Teensy4_0.h"          // For PhobGCC board 1.2.x with Teensy 4.0
 //#include "../rp2040/include/PicoProtoboard.h"    // For a protoboard with a Pico on it, used for developing for the RP2040
 //#include "../rp2040/include/Phob2_0.h"           // For PhobGCC Board 2.0 with RP2040
-#include "../teensy/Phobox_Teensy4_0.h"
-//#include "../rp2040/include/Phobox_Pico.h"           
+//include "../teensy/Phobox_Teensy4_0.h"
+#include "../rp2040/include/Phobox_Pico.h"           
 
 #include "structsAndEnums.h"
 #include "variables.h"
