@@ -138,7 +138,9 @@ void readButtons(const Pins &, Buttons &hardware) {
 	hardware.X  = !gpio_get(_pinX);
 	hardware.Y  = !gpio_get(_pinY);
 	hardware.L  = !gpio_get(_pinL);
+#ifndef HE_BUTTON_R
 	hardware.R  = !gpio_get(_pinR);
+#endif
 	hardware.Z  = !gpio_get(_pinZ);
 	hardware.S  = !gpio_get(_pinS);
 #ifndef DPAD_BUTTON
@@ -158,34 +160,7 @@ void readADCScale(float &, float ) {
 	//do nothing
 }
 
-//implement a 3 unit deadzone
-#ifndef ANALOG_TRIGGER_BUTTONS
-int readLa(const Pins &, const int initial, const float scale) {
-	adc_select_input(_pinLadc);
-	float temp = adc_read() / 16.0;
-	if(temp < 3) {
-		temp = 0.0f;
-	}
-	return fmin(255, fmax(0, temp - initial) * scale);
-}
-int readRa(const Pins &, const int initial, const float scale) {
-	adc_select_input(_pinRadc);
-	float temp = adc_read() / 16.0;
-	if(temp < 3) {
-		temp = 0.0f;
-	}
-	return fmin(255, fmax(0, temp - initial) * scale);
-}
-#else
-void readAnalogTriggerButtons(const Pins &, Buttons &hardware){
-#ifdef MOD_SHIELD
-	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS) & !gpio_get(_pinLS)? 94 : !gpio_get(_pinLS)? 49: 0;
-#else
-	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS)? 94 : !gpio_get(_pinLS)? 49: 0;
-#endif
-	hardware.Ra = !gpio_get(_pinR)? 140 : 0;
-}
-#endif
+
 /*
 //for external MCP3002 adc, 10 bit
 int __time_critical_func(readExtAdc)(const WhichStick whichStick, const WhichAxis whichAxis) {
@@ -242,37 +217,101 @@ int __time_critical_func(readExtAdc)(const WhichStick whichStick, const WhichAxi
 	if(whichAxis == YAXIS) {
 		configBits[0] =     0b11110000;//channel 1
 	}
+	// MCP 3204
+	else if(whichAxis == UP) {
+		configBits[0] =     0b11000000;//channel 0
+	}
+	else if(whichAxis == LEFT) {
+		configBits[0] =     0b11001000;//channel 1
+	}
+	else if(whichAxis == DOWN) {
+		configBits[0] =     0b11010000;//channel 2
+	}
+	if(whichAxis == RIGHT) {
+		configBits[0] =     0b11011000;//channel 3
+	}
 	uint8_t buf[2];
+
 	//asm volatile("nop \n nop \n nop");//these were in the example; are they needed?
 	if(whichStick == ASTICK) {
 		//left stick
 		gpio_put(_pinAcs, 0);
 
 	}
-#ifndef C_BUTTONS 
 	else {
 		//c-stick
 		gpio_put(_pinCcs, 0);
 	}
-#endif
 	//asm volatile("nop \n nop \n nop");
 
 	spi_read_blocking(spi0, *configBits, buf, 3);
+#ifndef HE_BUTTONS_LSTICK
 	uint16_t tempValue = (((buf[0] & 0b00000111) << 9) | buf[1] << 1 | buf[2] >> 7);
-
+#else
+	uint16_t tempValue;
+	if (whichStick == ASTICK){
+		tempValue = (((buf[0] & 0b00000001) << 11) | buf[1] << 3 | buf[2] >> 5);
+	}
+	else{
+		tempValue = (((buf[0] & 0b00000111) << 9) | buf[1] << 1 | buf[2] >> 7);
+	}
+#endif
 	//asm volatile("nop \n nop \n nop");
 	if(whichStick == ASTICK) {
 		gpio_put(_pinAcs, 1);
 	} 
-#ifndef C_BUTTONS 
 	else {
 		gpio_put(_pinCcs, 1);
 	}
-#endif
 	//asm volatile("nop \n nop \n nop");
 
 	return tempValue;
 }
+
+//implement a 3 unit deadzone
+#ifndef ANALOG_TRIGGER_BUTTONS
+int readLa(const Pins &, const int initial, const float scale) {
+	adc_select_input(_pinLadc);
+	float temp = adc_read() / 16.0;
+	if(temp < 3) {
+		temp = 0.0f;
+	}
+	return fmin(255, fmax(0, temp - initial) * scale);
+}
+int readRa(const Pins &, const int initial, const float scale) {
+	adc_select_input(_pinRadc);
+	float temp = adc_read() / 16.0;
+	if(temp < 3) {
+		temp = 0.0f;
+	}
+	return fmin(255, fmax(0, temp - initial) * scale);
+}
+#else
+void readAnalogTriggerButtons(const Pins &, Buttons &hardware){
+#ifdef MOD_SHIELD
+	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS) & !gpio_get(_pinLS)? 94 : !gpio_get(_pinLS)? 49: 0;
+#else
+	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS)? 94 : !gpio_get(_pinLS)? 49: 0;
+#endif
+#ifndef HE_BUTTON_R
+	hardware.Ra = !gpio_get(_pinR)? 140 : 0;
+#else
+	int tempR = readExtAdc(CSTICK, XAXIS);
+	tempR = tempR >> 4;
+	tempR = -4*(tempR - 121);
+	if (tempR < 0){
+		tempR = 0;
+	}
+	hardware.Ra = tempR;
+	if (hardware.Ra > 140){
+		hardware.R = (uint8_t) (1);
+	}
+	else{
+		hardware.R = (uint8_t) (0);
+	}
+#endif
+}
+#endif
 
 int readAx(const Pins &) {
 	return readExtAdc(ASTICK, XAXIS);
@@ -280,6 +319,33 @@ int readAx(const Pins &) {
 int readAy(const Pins &) {
 	return readExtAdc(ASTICK, YAXIS);
 }
+
+#ifdef HE_BUTTONS_LSTICK
+void calHEButton(int &adcTemp, uint8_t scale, uint8_t offset){
+	adcTemp = adcTemp >> 4;
+	adcTemp = -1*scale*(adcTemp - offset);
+	if (adcTemp < 0){
+		adcTemp = 0;
+	}
+	else if (adcTemp > 80){
+		adcTemp = 80;
+	}
+}
+void readAButtons(Buttons &hardware){
+	int aLeft = readExtAdc(ASTICK, LEFT);
+	int aRight = readExtAdc(ASTICK, RIGHT);
+	int aDown = readExtAdc(ASTICK, DOWN);
+	int aUp = readExtAdc(ASTICK, UP);
+	calHEButton(aLeft,2,116);
+	calHEButton(aRight,2,122);
+	calHEButton(aDown,2,116);
+	calHEButton(aUp,2,126);
+	aLeft = aRight - aLeft;
+	aDown = aUp - aDown;
+	hardware.Ax = (uint8_t) 128 + aLeft;
+	hardware.Ay = (uint8_t) 128 + aDown;
+}
+#endif
 #ifndef C_BUTTONS
 int readCx(const Pins &) {
 	return readExtAdc(CSTICK, XAXIS);

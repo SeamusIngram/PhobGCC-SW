@@ -29,34 +29,39 @@
 #define DPAD_BUTTON
 #endif
 
+#ifndef HE_BUTTONS_LSTICK
+#define HE_BUTTONS_LSTICK
+#endif
+
+#ifndef HE_BUTTON_R
+#define HE_BUTTON_R
+#endif
 //defining which pin is what
 //GPIO
 //TODO: these are all temporary
-const int _pinA =  12;
-const int _pinB =  22;
+const int _pinA =  10;
+const int _pinB =  19;
 const int _pinL =  18;
-const int _pinR =  21;
-const int _pinX =  20;
-const int _pinY =  19;
-const int _pinZ =  17;
-const int _pinS =  8;
-const int _pinRumble = -1;
-const int _pinBrake = -1;
+const int _pinX =  16;
+const int _pinY =  17;
+const int _pinZ =  15;
+const int _pinS =  21;
+
 const int _pinTX  = 28;
 //GPIO for rectangle controllers
-const int _pinCr = 10;
-const int _pinCu = 11;
-const int _pinCl = 13;
-const int _pinCd = 14;
-const int _pinD = 9;
-const int _pinLS = 15;
-const int _pinMS = 16;
+const int _pinCr = 8;
+const int _pinCu = 9;
+const int _pinCl = 11;
+const int _pinCd = 12;
+const int _pinD = 22;
+const int _pinLS = 14;
+const int _pinMS = 13;
 //GPIO SPI for ADCs
 const int _pinSPIclk = 6;
 const int _pinSPItx  = 7;
 const int _pinSPIrx  = 4;
 const int _pinAcs    = 5;
-// const int _pinCcs = 1;
+const int _pinCcs    = 1;
 //a little resistor ladder DAC
 const int _pinDac0 = 0;
 const int _pinDac1 = 1;
@@ -70,6 +75,9 @@ const int _pinSpare0 = 26;
 const int _pinSpare1 = 26;
 const int _pinSpare2 = 27;
 
+const int _pinRumble = -1;
+const int _pinBrake = -1;
+const int _pinR =  -1;
 
 const int _pinAx = -1;
 const int _pinAy = -1;

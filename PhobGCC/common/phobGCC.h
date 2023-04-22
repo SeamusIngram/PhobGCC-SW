@@ -19,8 +19,11 @@ using std::max;
 //#include "../teensy/Phob1_2Teensy4_0.h"          // For PhobGCC board 1.2.x with Teensy 4.0
 //#include "../rp2040/include/PicoProtoboard.h"    // For a protoboard with a Pico on it, used for developing for the RP2040
 //#include "../rp2040/include/Phob2_0.h"           // For PhobGCC Board 2.0 with RP2040
-//include "../teensy/Phobox_Teensy4_0.h"
-#include "../rp2040/include/Phobox_Pico.h"           
+//include "../teensy/Phobox1_0Teensy4_0.h"
+//include "../teensy/Phobox1_2Teensy4_0.h"
+// #include "../rp2040/include/Phobox2_0Pico.h"  
+//#include "../rp2040/include/Phobox2_2Pico.h"
+#include "../rp2040/include/Phobox2_0_5HE.h"             
 
 #include "structsAndEnums.h"
 #include "variables.h"
@@ -1759,6 +1762,9 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 	}
 #else
 	readAnalogTriggerButtons(pin,tempBtn);
+#ifdef HE_BUTTON_R	
+	hardware.R = tempBtn.R;
+#endif
 #endif
 
 	//Apply any further button remapping to tempBtn here
@@ -1884,6 +1890,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 #else // RUMBLE
 			freezeSticks(2000, btn, hardware);
 #endif // RUMBLE
+#ifndef HE_BUTTONS_LSTICK
 		} else if (hardware.A && hardware.X && hardware.Y && hardware.L) { //Analog Calibration
 #ifdef ARDUINO
 			Serial.println("Calibrating the A stick");
@@ -1893,6 +1900,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			advanceCal = true;
 			freezeSticks(2000, btn, hardware);
 		}
+#endif		
 #ifndef C_BUTTONS 
 		else if (hardware.A && hardware.X && hardware.Y && hardware.R) { //C-stick Calibration
 #ifdef ARDUINO
@@ -1904,6 +1912,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			freezeSticks(2000, btn, hardware);
 		} 
 #endif
+#ifndef HE_BUTTONS_LSTICK
 		else if(hardware.A && hardware.X && !hardware.Z && hardware.Du) { //Increase Analog X-Axis Snapback Filtering
 			adjustSnapback(XAXIS, INCREASE, btn, hardware, controls, gains, normGains);
 		} else if(hardware.A && hardware.X && !hardware.Z && hardware.Dd) { //Decrease Analog X-Axis Snapback Filtering
@@ -1930,6 +1939,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			adjustSmoothing(YAXIS, DECREASE, btn, hardware, controls, gains, normGains);
 		} else if(hardware.L && hardware.S && !hardware.A && !hardware.R && !hardware.X && !hardware.Y) { //Show Current Analog Settings (ignore L jump and L trigger toggle and LRAS)
 			showAstickSettings(btn, hardware, controls, gains);
+#endif
 #ifndef C_BUTTONS 
 		} else if(hardware.A && hardware.X && hardware.Z && hardware.Du) { //Increase C-stick X-Axis Snapback Filtering
 			adjustCstickSmoothing(XAXIS, INCREASE, btn, hardware, controls, gains, normGains);
@@ -2114,8 +2124,10 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	float cStickY = cYSum/(float)adcCount/4096.0*_ADCScale;
 #endif
 #else //CLEANADC: read only once
+#ifndef HE_BUTTONS_LSTICK
 	float aStickX = readAx(pin)/4096.0;
 	float aStickY = readAy(pin)/4096.0;
+#endif
 #ifndef C_BUTTONS
 	float cStickX = readCx(pin)/4096.0;
 	float cStickY = readCy(pin)/4096.0;
@@ -2138,12 +2150,15 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	if(micros() - lastMicros > 1500) { //handle the case that it was synced and now isn't
 		lastMicros = micros();
 	}
+#ifndef HE_BUTTONS_LSTICK
 	_raw.axRaw = aStickX;
 	_raw.ayRaw = aStickY;
+#endif
 #ifndef C_BUTTONS
 	_raw.cxRaw = cStickX;
 	_raw.cyRaw = cStickY;
 #endif
+#ifndef HE_BUTTONS_LSTICK
 	//create the measurement value to be used in the kalman filter
 	float xZ;
 	float yZ;
@@ -2151,19 +2166,23 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	//linearize the analog stick inputs by multiplying by the coefficients found during calibration (3rd order fit)
 	xZ = linearize(aStickX, aStickParams.fitCoeffsX);
 	yZ = linearize(aStickY, aStickParams.fitCoeffsY);
+#endif
 #ifndef C_BUTTONS
 	float posCx = linearize(cStickX, cStickParams.fitCoeffsX);
 	float posCy = linearize(cStickY, cStickParams.fitCoeffsY);
 #endif
+#ifndef HE_BUTTONS_LSTICK
 	float posAx = xZ;
 	float posAy = yZ;
 
 	_raw.axLinearized = posAx;
 	_raw.ayLinearized = posAy;
+#endif
 #ifndef C_BUTTONS
 	_raw.cxLinearized = posCx;
 	_raw.cyLinearized = posCy;
 #endif
+#ifndef HE_BUTTONS_LSTICK
 	//Run the kalman filter to eliminate snapback
 	static float xPosFilt = 0;//output of kalman filter
 	static float yPosFilt = 0;//output of kalman filter
@@ -2181,7 +2200,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	posAy = normGains.ySmoothing*shapedAy + (1-normGains.ySmoothing)*oldPosAy;
 	oldPosAx = posAx;
 	oldPosAy = posAy;
-
+#endif
 #ifndef C_BUTTONS
 	//Run waveshaping on the c-stick
 	cRunWaveShaping(posCx, posCy, posCx, posCy, controls, normGains);
@@ -2213,13 +2232,14 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
     runMedian(posAx, xPosList, xMedianIndex);
     runMedian(posAy, yPosList, yMedianIndex);
 #endif
-
+#ifndef HE_BUTTONS_LSTICK
 	float remappedAx;
 	float remappedAy;
 	float remappedAxUnfiltered;
 	float remappedAyUnfiltered;
 	notchRemap(posAx, posAy, &remappedAx, &remappedAy, _noOfNotches, aStickParams, currentCalStep);
 	notchRemap(_raw.axLinearized, _raw.ayLinearized, &remappedAxUnfiltered, &remappedAyUnfiltered, _noOfNotches, aStickParams, 1);//no snapping
+#endif
 #ifndef C_BUTTONS
 	float remappedCx;
 	float remappedCy;
@@ -2228,11 +2248,13 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	notchRemap(posCx, posCy, &remappedCx, &remappedCy, _noOfNotches, cStickParams, currentCalStep);
 	notchRemap(_raw.cxLinearized, _raw.cyLinearized, &remappedCxUnfiltered, &remappedCyUnfiltered, _noOfNotches, cStickParams, 1);//no snapping
 #endif
+#ifndef HE_BUTTONS_LSTICK
 	//Clamp values from -125 to +125
 	remappedAx = fmin(125, fmax(-125, remappedAx));
 	remappedAy = fmin(125, fmax(-125, remappedAy));
 	_raw.axUnfiltered = fmin(125, fmax(-125, remappedAxUnfiltered));
 	_raw.ayUnfiltered = fmin(125, fmax(-125, remappedAyUnfiltered));
+#endif
 #ifndef C_BUTTONS
 	remappedCx = fmin(125, fmax(-125, remappedCx+controls.cXOffset));
 	remappedCy = fmin(125, fmax(-125, remappedCy+controls.cYOffset));
@@ -2249,6 +2271,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	float hystVal = 0.3;
 	//assign the remapped values to the button struct
 	if(readA){
+		#ifndef HE_BUTTONS_LSTICK
 		if (!skipAHyst) {
 			float diffAx = (remappedAx+_floatOrigin)-btn.Ax;
 			if( (diffAx > (1.0 + hystVal)) || (diffAx < -hystVal) ){
@@ -2262,6 +2285,9 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 			btn.Ax = (uint8_t) (remappedAx+_floatOrigin);
 			btn.Ay = (uint8_t) (remappedAy+_floatOrigin);
 		}
+		#else
+			readAButtons(btn);
+		#endif
 	}
 	if(readC){
 	#ifndef C_BUTTONS

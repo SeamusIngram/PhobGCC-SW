@@ -25,7 +25,11 @@ enum Increase {
 
 enum WhichAxis {
 	XAXIS,
-	YAXIS
+	YAXIS,
+	LEFT,
+	RIGHT,
+	DOWN,
+	UP
 };
 
 enum WhichStick {
