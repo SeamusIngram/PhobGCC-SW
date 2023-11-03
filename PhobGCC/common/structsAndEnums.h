@@ -68,58 +68,37 @@ struct ExtrasConfig{
 	IntOrFloat config[4];
 };
 
-// Pins for standard Phob
-// struct Pins{
-// 	int pinLa;
-// 	int pinRa;
-// 	int pinL;
-// 	int pinR;
-// 	int pinAx;
-// 	int pinAy;
-// 	int pinCx;
-// 	int pinCy;
-// 	int pinRX;
-// 	int pinTX;
-// 	int pinDr;
-// 	int pinDu;
-// 	int pinDl;
-// 	int pinDd;
-// 	int pinX;
-// 	int pinY;
-// 	int pinA;
-// 	int pinB;
-// 	int pinZ;
-// 	int pinS;
-// };
-//Pins for Rectangle with 1 DPAD Button
+//Pins for standard Phob
 struct Pins{
-
-	int pinLS;
-	int pinMS;
-
+	int pinLa;
+	int pinRa;
 	int pinL;
 	int pinR;
 	int pinAx;
 	int pinAy;
-
-	int pinCr;
-	int pinCu;
-	int pinCl;
-	int pinCd;
-
+	int pinCx;
+	int pinCy;
 	int pinRX;
 	int pinTX;
-
-	int pinD;
-
+	int pinDr;
+	int pinDu;
+	int pinDl;
+	int pinDd;
 	int pinX;
 	int pinY;
 	int pinA;
 	int pinB;
 	int pinZ;
 	int pinS;
+// Extra Buttons For Analog Shield Buttons, CPAD with DPAD Toggle Button
+	int pinLS;
+	int pinMS;
+	int pinCr;
+	int pinCu;
+	int pinCl;
+	int pinCd;
+	int pinD;
 };
-
 union Buttons{
 	uint8_t arr[10];
 	struct {

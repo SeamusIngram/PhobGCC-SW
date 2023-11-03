@@ -22,7 +22,6 @@ void setPinModes() {
 	gpio_init(_pinB);
 	gpio_pull_up(_pinB);
 	gpio_set_dir(_pinB, GPIO_IN);
-#ifndef DPAD_BUTTON
 	gpio_init(_pinDr);
 	gpio_pull_up(_pinDr);
 	gpio_set_dir(_pinDr, GPIO_IN);
@@ -35,11 +34,10 @@ void setPinModes() {
 	gpio_init(_pinDd);
 	gpio_pull_up(_pinDd);
 	gpio_set_dir(_pinDd, GPIO_IN);
-#else
+	// Dpad Button
 	gpio_init(_pinD);
 	gpio_pull_up(_pinD);
 	gpio_set_dir(_pinD, GPIO_IN);
-#endif
 	gpio_init(_pinL);
 	gpio_pull_up(_pinL);
 	gpio_set_dir(_pinL, GPIO_IN);
@@ -58,7 +56,7 @@ void setPinModes() {
 	gpio_init(_pinS);
 	gpio_pull_up(_pinS);
 	gpio_set_dir(_pinS, GPIO_IN);
-#ifdef C_BUTTONS
+// C Buttons
 	gpio_init(_pinCr);
 	gpio_pull_up(_pinCr);
 	gpio_set_dir(_pinCr, GPIO_IN);
@@ -71,15 +69,13 @@ void setPinModes() {
 	gpio_init(_pinCd);
 	gpio_pull_up(_pinCd);
 	gpio_set_dir(_pinCd, GPIO_IN);
-#endif
-#ifdef ANALOG_TRIGGER_BUTTONS
+// Analog Triggers
 	gpio_init(_pinLS);
 	gpio_pull_up(_pinLS);
 	gpio_set_dir(_pinLS, GPIO_IN);
 	gpio_init(_pinMS);
 	gpio_pull_up(_pinMS);
 	gpio_set_dir(_pinMS, GPIO_IN);
-#endif
 
 	/* the comms library sets this
 	gpio_init(_pinTx);
@@ -112,17 +108,13 @@ void setPinModes() {
 	gpio_init(_pinAcs);
 	gpio_set_dir(_pinAcs, GPIO_OUT);
 	gpio_put(_pinAcs, 1);//active low
-#ifndef C_BUTTONS
 	gpio_init(_pinCcs);
 	gpio_set_dir(_pinCcs, GPIO_OUT);
 	gpio_put(_pinCcs, 1);//active low
-#endif
 	//initialize ADC for triggers
-#ifndef ANALOG_TRIGGER_BUTTONS
 	adc_init();
 	adc_gpio_init(_pinLa);
 	adc_gpio_init(_pinRa);
-#endif
 	//initialize DAC outputs
 	gpio_init(_pinDac0);
 	gpio_init(_pinDac1);
@@ -229,19 +221,19 @@ int __time_critical_func(readExtAdc)(const WhichStick whichStick, const WhichAxi
 	if(whichAxis == YAXIS) {
 		configBits[0] =     0b11110000;//channel 1
 	}
-	// MCP 3204
-	else if(whichAxis == UP) {
-		configBits[0] =     0b11000000;//channel 0
-	}
-	else if(whichAxis == LEFT) {
-		configBits[0] =     0b11001000;//channel 1
-	}
-	else if(whichAxis == DOWN) {
-		configBits[0] =     0b11010000;//channel 2
-	}
-	if(whichAxis == RIGHT) {
-		configBits[0] =     0b11011000;//channel 3
-	}
+	// MCP 3204/8
+	// else if(whichAxis == UP) {
+	// 	configBits[0] =     0b11000000;//channel 0
+	// }
+	// else if(whichAxis == LEFT) {
+	// 	configBits[0] =     0b11001000;//channel 1
+	// }
+	// else if(whichAxis == DOWN) {
+	// 	configBits[0] =     0b11010000;//channel 2
+	// }
+	// if(whichAxis == RIGHT) {
+	// 	configBits[0] =     0b11011000;//channel 3
+	// }
 	uint8_t buf[2];
 
 	//asm volatile("nop \n nop \n nop");//these were in the example; are they needed?

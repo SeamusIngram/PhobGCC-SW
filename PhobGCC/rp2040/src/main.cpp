@@ -715,7 +715,6 @@ void second_core() {
 
 		//read the controller's buttons
 		processButtons(_pinList, _btn, _hardware, _controls, _gains, _normGains, _currentCalStep, running, tempCalPointsX, tempCalPointsY, whichStick, notchStatus, notchAngles, measuredNotchAngles, _aStickParams, _cStickParams);
-
 	}
 }
 
@@ -735,42 +734,33 @@ int main() {
 	setPinModes();
 
 	Pins pinList {//not actually necessary for any of the rp2040 read functions
-#ifndef ANALOG_TRIGGER_BUTTONS
 	.pinLa = 0,
 	.pinRa = 0,
-#else
-	.pinLS = 0,
-	.pinMS = 0,
-#endif
 	.pinL  = 0,
 	.pinR  = 0,
 	.pinAx = 0,
 	.pinAy = 0,
-#ifndef C_BUTTONS
 	.pinCx = 0,
 	.pinCy = 0,
-#else
-	.pinCr = 0,
-	.pinCu = 0,
-	.pinCl = 0,
-	.pinCd = 0,
-#endif
 	.pinRX = 0,
 	.pinTX = 0,
-#ifndef DPAD_BUTTON
 	.pinDr = 0,
 	.pinDu = 0,
 	.pinDl = 0,
 	.pinDd = 0,
-#else
-	.pinD  = 0,
-#endif
 	.pinX  = 0,
 	.pinY  = 0,
 	.pinA  = 0,
 	.pinB  = 0,
 	.pinZ  = 0,
-	.pinS  = 0
+	.pinS  = 0,
+	.pinLS = 0,
+	.pinMS = 0,
+	.pinCr = 0,
+	.pinCu = 0,
+	.pinCl = 0,
+	.pinCd = 0,
+	.pinD  = 0
 	};
 
 	_btn.A      =0;

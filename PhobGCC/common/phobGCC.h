@@ -21,9 +21,9 @@ using std::max;
 //#include "../rp2040/include/Phob2_0.h"           // For PhobGCC Board 2.0 with RP2040
 //include "../teensy/Phobox1_0Teensy4_0.h"
 //include "../teensy/Phobox1_2Teensy4_0.h"
-// #include "../rp2040/include/Phobox2_0Pico.h"  
+#include "../rp2040/include/Phob2_Tadpole.h"  
 //#include "../rp2040/include/Phobox2_2Pico.h"
-#include "../rp2040/include/Phobox2_0_5HE.h"             
+//#include "../rp2040/include/Phobox2_0_5HE.h"             
 
 #include "structsAndEnums.h"
 #include "variables.h"
@@ -128,42 +128,33 @@ FilterGains _gains {//these values are for 800 hz, recomputeGains converts them 
 FilterGains _normGains;//this gets filled by recomputeGains();
 
 Pins _pinList {
-#ifndef ANALOG_TRIGGER_BUTTONS
 	.pinLa = _pinLa,
 	.pinRa = _pinRa,
-#else
-	.pinLS = _pinLS,
-	.pinMS = _pinMS,
-#endif
 	.pinL  = _pinL,
 	.pinR  = _pinR,
 	.pinAx = _pinAx,
 	.pinAy = _pinAy,
-#ifndef C_BUTTONS
 	.pinCx = _pinCx,
 	.pinCy = _pinCy,
-#else
-	.pinCr = _pinCr,
-	.pinCu = _pinCu,
-	.pinCl = _pinCl,
-	.pinCd = _pinCd,
-#endif
 	.pinRX = _pinRX,
 	.pinTX = _pinTX,
-#ifndef DPAD_BUTTON
 	.pinDr = _pinDr,
 	.pinDu = _pinDu,
 	.pinDl = _pinDl,
 	.pinDd = _pinDd,
-#else
-	.pinD  = _pinD,
-#endif
 	.pinX  = _pinX,
 	.pinY  = _pinY,
 	.pinA  = _pinA,
 	.pinB  = _pinB,
 	.pinZ  = _pinZ,
-	.pinS  = _pinS
+	.pinS  = _pinS,
+	.pinLS = _pinLS, // Shield Buttons
+	.pinMS = _pinMS,
+	.pinCr = _pinCr, // CPAD Buttons
+	.pinCu = _pinCu,
+	.pinCl = _pinCl,
+	.pinCd = _pinCd,
+	.pinD  = _pinD // DPAD button
 };
 
 int calcRumblePower(const int rumble){
@@ -881,7 +872,7 @@ void initializeButtons(const Pins &pin, Buttons &btn,int &startUpLa, int &startU
 		startUpLa = max(startUpLa,readLa(pin, 0, 1));
 		startUpRa = max(startUpRa,readRa(pin, 0, 1));
 	}
-	#endif
+	#endif // Analog Trigger Buttons
 	//set the trigger values to this measured startup value
 	btn.La = 0;
 	btn.Ra = 0;
@@ -1538,7 +1529,7 @@ void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const Whic
 			readADCScale(_ADCScale, _ADCScaleFactor);
 			float X = 0;
 			float Y = 0;
-			for(int i=0; i<128; i++) {
+			for(int i=0; i<128; i++) { 
 				X += readAx(_pinList)/4096.0*_ADCScale;
 				Y += readAy(_pinList)/4096.0*_ADCScale;
 			}
@@ -1565,7 +1556,7 @@ void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const Whic
 			notchIndex = _notchAdjOrder[min(currentCalStep-_noOfCalibrationPoints, _noOfAdjNotches-1)];//limit this so it doesn't access outside the array bounds
 		}
 		if(currentCalStep >= _noOfCalibrationPoints + _noOfAdjNotches){//done adjusting notches
-			debug_println("finished adjusting notches for the C stick");
+			debug_println("finished adjusting notches for the A stick");
 			setPointsSetting(tempCalPointsX, whichStick, XAXIS);
 			setPointsSetting(tempCalPointsY, whichStick, YAXIS);
 			setNotchAnglesSetting(notchAngles, whichStick);
@@ -1582,7 +1573,7 @@ void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const Whic
 			cleanCalPoints(tempCalPointsX, tempCalPointsY, notchAngles, cleanedPointsX, cleanedPointsY, notchPointsX, notchPointsY, notchStatus);
 			debug_println("calibration points cleaned");
 			linearizeCal(cleanedPointsX, cleanedPointsY, cleanedPointsX, cleanedPointsY, cStickParams);
-			debug_println("C stick linearized");
+			debug_println("A stick linearized");
 			notchCalibrate(cleanedPointsX, cleanedPointsY, notchPointsX, notchPointsY, _noOfNotches, cStickParams);
 			currentCalStep = -1;
 		}
@@ -1620,7 +1611,7 @@ void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const Whic
 			notchIndex = _notchAdjOrder[min(currentCalStep-_noOfCalibrationPoints, _noOfAdjNotches-1)];//limit this so it doesn't access outside the array bounds
 		}
 		if(currentCalStep >= _noOfCalibrationPoints + _noOfAdjNotches){//done adjusting notches
-			debug_println("finished adjusting notches for the A stick");
+			debug_println("finished adjusting notches for the C stick");
 			setPointsSetting(tempCalPointsX, whichStick, XAXIS);
 			setPointsSetting(tempCalPointsY, whichStick, YAXIS);
 			setNotchAnglesSetting(notchAngles, whichStick);
@@ -1642,7 +1633,7 @@ void calibrationAdvance(ControlConfig &controls, int &currentCalStep, const Whic
 			currentCalStep = -1;
 		}
 	}
-#endif
+#endif //C Buttons
 }
 
 void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &controls, FilterGains &gains, FilterGains &normGains, int &currentCalStep, bool &running, float tempCalPointsX[], float tempCalPointsY[], WhichStick &whichStick, NotchStatus notchStatus[], float notchAngles[], float measuredNotchAngles[], StickParams &aStickParams, StickParams &cStickParams){
@@ -1651,7 +1642,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 #ifndef ANALOG_TRIGGER_BUTTONS
 	hardware.La = (uint8_t) readLa(pin, controls.lTrigInitial, 1);
 	hardware.Ra = (uint8_t) readRa(pin, controls.rTrigInitial, 1);
-#endif
+#endif // Analog Trigger Buttons
 	//Copy hardware buttons into a temp
 	Buttons tempBtn;
 	copyButtons(hardware, tempBtn);
@@ -1760,8 +1751,8 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 	readAnalogTriggerButtons(pin,tempBtn);
 #ifdef HE_BUTTON_R	
 	hardware.R = tempBtn.R;
-#endif
-#endif
+#endif //HE Trigger Button
+#endif // Analog Trigger buttons
 
 	//Apply any further button remapping to tempBtn here
 
@@ -1942,7 +1933,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			advanceCal = true;
 			freezeSticks(2000, btn, hardware);
 		}
-#endif		
+#endif // HE Button Stick	
 #ifndef C_BUTTONS 
 		else if (hardware.A && hardware.X && hardware.Y && hardware.R) { //C-stick Calibration
 #ifdef ARDUINO
@@ -1953,7 +1944,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			advanceCal = true;
 			freezeSticks(2000, btn, hardware);
 		} 
-#endif
+#endif // C Buttons
 #ifndef HE_BUTTONS_LSTICK
 		else if(hardware.A && hardware.X && !hardware.Z && hardware.Du) { //Increase Analog X-Axis Snapback Filtering
 			settingChangeCount++;
@@ -2005,7 +1996,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			adjustAnalogScaler(ASTICK, DECREASE, btn, hardware, controls);
 		} else if(hardware.L && hardware.S && !hardware.A && !hardware.R && !hardware.X && !hardware.Y) { //Show Current Analog Settings (ignore L jump and L trigger toggle and LRAS)
 			showAstickSettings(btn, hardware, controls, gains);
-#endif
+#endif // HE Button Stick
 #ifndef C_BUTTONS 
 		} else if(hardware.A && hardware.X && hardware.Z && hardware.Du) { //Increase C-stick X-Axis Snapback Filtering
 			settingChangeCount++;
@@ -2056,7 +2047,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 			adjustAnalogScaler(CSTICK, DECREASE, btn, hardware, controls);
 		} else if(hardware.R && hardware.S && !hardware.A && !hardware.L && !hardware.X && !hardware.Y) { //Show Current C-stick Settings (ignore R jump and R trigger toggle and LRAS)
 			showCstickSettings(btn, hardware, controls, gains);
-#endif
+#endif // C Buttons
 #ifndef ANALOG_TRIGGER_BUTTONS
 		} else if(hardware.A && hardware.B && hardware.L) { //Toggle Analog L
 			settingChangeCount++;
@@ -2076,7 +2067,7 @@ void processButtons(Pins &pin, Buttons &btn, Buttons &hardware, ControlConfig &c
 		} else if(hardware.R && hardware.B && hardware.Dd) { //Decrease R-trigger Offset
 			settingChangeCount++;
 			adjustTriggerOffset(RTRIGGER, DECREASE, btn, hardware, controls);
-#endif
+#endif // Analog Trigger Button
 		} else if(hardware.X && hardware.Z && hardware.S) { //Swap X and Z
 			settingChangeCount++;
 			setJumpConfig(SWAP_XZ, controls);
@@ -2208,13 +2199,14 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	//Read the sticks repeatedly until it's been 1 millisecond since the last iteration
 	//This is for denoising and making sure the loop runs at 1000 Hz
 	//We want to stop the ADC reading early enough that we don't overrun 1000 microseconds
+
 	uint32_t adcCount = 0;
 	uint32_t aXSum = 0;
 	uint32_t aYSum = 0;
 #ifndef C_BUTTONS
 	uint32_t cXSum = 0;
 	uint32_t cYSum = 0;
-#endif
+#endif // C Buttons
 	uint32_t beforeMicros = micros();
 	uint32_t afterMicros;
 	do{
@@ -2224,7 +2216,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	#ifndef C_BUTTONS
 		cXSum += readCx(pin);
 		cYSum += readCy(pin);
-	#endif
+	#endif // C Buttons
 		afterMicros = micros();
 		adcDelta = afterMicros-beforeMicros;
 		beforeMicros = afterMicros;
@@ -2237,21 +2229,23 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	}
 
 	//debug_println(adcCount);
-	float aStickX = aXSum/(float)adcCount/4096.0*_ADCScale;
-	float aStickY = aYSum/(float)adcCount/4096.0*_ADCScale;
+	float aStickX = aXSum/(float)adcCount/16.0*_ADCScale;
+	float aStickY = aYSum/(float)adcCount/16.0*_ADCScale;
 #ifndef C_BUTTONS
 	float cStickX = cXSum/(float)adcCount/4096.0*_ADCScale;
 	float cStickY = cYSum/(float)adcCount/4096.0*_ADCScale;
-#endif
+#endif // C Buttons
+
+	/*
 #else //CLEANADC: read only once
 #ifndef HE_BUTTONS_LSTICK
-	float aStickX = readAx(pin)/4096.0;
-	float aStickY = readAy(pin)/4096.0;
-#endif
+	float aStickX = readAx(pin)/16.0;
+	float aStickY = readAy(pin)/16.0;
+#endif // HE Button Stick
 #ifndef C_BUTTONS
 	float cStickX = readCx(pin)/4096.0;
 	float cStickY = readCy(pin)/4096.0;
-#endif //C_BUTTONS
+#endif //C BUTTONS
 	//note: this actually results in about 0.5 ms delay for the analog sticks
 
 	uint32_t thisMicros = micros();
@@ -2260,6 +2254,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	}
 #endif //CLEANADC
 	*/
+
 	dT = (micros()-lastMicros)/1000;
 	lastMicros += 1000;
 	if(micros() - lastMicros > 1500) { //handle the case that it was synced and now isn't
@@ -2268,11 +2263,11 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 #ifndef HE_BUTTONS_LSTICK
 	_raw.axRaw = aStickX;
 	_raw.ayRaw = aStickY;
-#endif
+#endif // HE Button Stick
 #ifndef C_BUTTONS
 	_raw.cxRaw = cStickX;
 	_raw.cyRaw = cStickY;
-#endif
+#endif // C Buttons
 #ifndef HE_BUTTONS_LSTICK
 	//create the measurement value to be used in the kalman filter
 	float xZ;
@@ -2281,22 +2276,22 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	//linearize the analog stick inputs by multiplying by the coefficients found during calibration (3rd order fit)
 	xZ = linearize(aStickX, aStickParams.fitCoeffsX);
 	yZ = linearize(aStickY, aStickParams.fitCoeffsY);
-#endif
+#endif // HE Button Stick
 #ifndef C_BUTTONS
 	float posCx = linearize(cStickX, cStickParams.fitCoeffsX);
 	float posCy = linearize(cStickY, cStickParams.fitCoeffsY);
-#endif
+#endif // C Buttons
 #ifndef HE_BUTTONS_LSTICK
 	float posAx = xZ;
 	float posAy = yZ;
 
 	_raw.axLinearized = posAx;
 	_raw.ayLinearized = posAy;
-#endif
+#endif // HE Button Stick
 #ifndef C_BUTTONS
 	_raw.cxLinearized = posCx;
 	_raw.cyLinearized = posCy;
-#endif
+#endif // C Buttons
 #ifndef HE_BUTTONS_LSTICK
 	//Run the kalman filter to eliminate snapback
 	static float xPosFilt = 0;//output of kalman filter
@@ -2315,7 +2310,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	posAy = normGains.ySmoothing*shapedAy + (1-normGains.ySmoothing)*oldPosAy;
 	oldPosAx = posAx;
 	oldPosAy = posAy;
-#endif
+#endif // HE Button Stick
 #ifndef C_BUTTONS
 	//Run waveshaping on the c-stick
 	cRunWaveShaping(posCx, posCy, posCx, posCy, controls, normGains);
@@ -2337,7 +2332,7 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 
 	posCx = cXPos;
 	posCy = cYPos;
-#endif
+#endif // C Buttons
 	//Run a median filter to reduce noise
 #ifdef USEMEDIAN
 	static float xPosList[MEDIANLEN] = MEDIANARRAY;//for median filtering;
@@ -2346,42 +2341,42 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 	static unsigned int yMedianIndex = 0;
     runMedian(posAx, xPosList, xMedianIndex);
     runMedian(posAy, yPosList, yMedianIndex);
-#endif
+#endif // USEMEDIAN
 #ifndef HE_BUTTONS_LSTICK
 	float remappedAx;
 	float remappedAy;
 	float remappedAxUnfiltered;
 	float remappedAyUnfiltered;
-	notchRemap(posAx, posAy, &remappedAx, &remappedAy, _noOfNotches, aStickParams, currentCalStep);
-	notchRemap(_raw.axLinearized, _raw.ayLinearized, &remappedAxUnfiltered, &remappedAyUnfiltered, _noOfNotches, aStickParams, 1);//no snapping
-#endif
+	notchRemap(posAx, posAy, &remappedAx, &remappedAy, _noOfNotches, aStickParams, currentCalStep, controls, ASTICK);
+	notchRemap(_raw.axLinearized, _raw.ayLinearized, &remappedAxUnfiltered, &remappedAyUnfiltered, _noOfNotches, aStickParams, 1, controls, ASTICK);//no snapping
+#endif // HE BUTTON STICK
 #ifndef C_BUTTONS
 	float remappedCx;
 	float remappedCy;
 	float remappedCxUnfiltered;
 	float remappedCyUnfiltered;
-	notchRemap(posCx, posCy, &remappedCx, &remappedCy, _noOfNotches, cStickParams, currentCalStep);
-	notchRemap(_raw.cxLinearized, _raw.cyLinearized, &remappedCxUnfiltered, &remappedCyUnfiltered, _noOfNotches, cStickParams, 1);//no snapping
-#endif
+	notchRemap(posCx, posCy, &remappedCx, &remappedCy, _noOfNotches, cStickParams, currentCalStep, controls, CSTICK);
+	notchRemap(_raw.cxLinearized, _raw.cyLinearized, &remappedCxUnfiltered, &remappedCyUnfiltered, _noOfNotches, cStickParams, 1, controls, CSTICK);//no snapping
+#endif // C Buttons
 #ifndef HE_BUTTONS_LSTICK
 	//Clamp values from -125 to +125
 	remappedAx = fmin(125, fmax(-125, remappedAx));
 	remappedAy = fmin(125, fmax(-125, remappedAy));
 	_raw.axUnfiltered = fmin(125, fmax(-125, remappedAxUnfiltered));
 	_raw.ayUnfiltered = fmin(125, fmax(-125, remappedAyUnfiltered));
-#endif
+#endif // HE BUTTON STICK
 #ifndef C_BUTTONS
 	remappedCx = fmin(125, fmax(-125, remappedCx+controls.cXOffset));
 	remappedCy = fmin(125, fmax(-125, remappedCy+controls.cYOffset));
 	_raw.cxUnfiltered = fmin(125, fmax(-125, remappedCxUnfiltered+controls.cXOffset));
 	_raw.cyUnfiltered = fmin(125, fmax(-125, remappedCyUnfiltered+controls.cYOffset));
-#endif
+#endif // C Buttons
 
 	bool skipAHyst = false;
 #ifdef EXTRAS_ESS
 	//ESS adapter functionality for Ocarina of Time on WiiVC if enabled
 	skipAHyst = ess::remap(&remappedAx, &remappedAy, controls.extras[ess::extrasEssConfigSlot].config);
-#endif
+#endif // Extra ESS
 
 	float hystVal = 0.3;
 	//assign the remapped values to the button struct
@@ -2400,9 +2395,9 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 			btn.Ax = (uint8_t) (remappedAx+_floatOrigin);
 			btn.Ay = (uint8_t) (remappedAy+_floatOrigin);
 		}
-		#else
-			readAButtons(btn);
-		#endif
+	#else
+		readAButtons(btn);
+	#endif // HE Button Stick
 	}
 	if(readC){
 	#ifndef C_BUTTONS
@@ -2416,7 +2411,9 @@ void readSticks(int readA, int readC, Buttons &btn, Pins &pin, RawStick &raw, co
 		}
 	#else
 		readCButtons(pin, btn);
-	#endif
+		btn.Cx = (uint8_t) aStickX;
+		btn.Cy = (uint8_t) aStickY;
+	#endif // C Buttons
 	}
 };
 

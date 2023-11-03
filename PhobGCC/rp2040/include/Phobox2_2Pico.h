@@ -76,16 +76,17 @@ const int _pinAy = -1;
 const int _pinRX = -1;
 const int _pinCx = -1;
 const int _pinCy = -1;
+const int _pinCcs = -1;
 // const int _pinDr = -1;
 // const int _pinDu = -1;
 // const int _pinDl = -1;
 // const int _pinDd = -1;
-// const int _pinCcs = -1;
+
 //two of the built-in ADCs:
 // const int _pinRa = 26; //GPIO number
 // const int _pinRadc = 0; //ADC number
 // const int _pinLa = 27; //GPIO number
 // const int _pinLadc = 1; //ADC number
 #include "readHardware.h"
-
+#include "debug.h"
 #endif //BOARD_H
