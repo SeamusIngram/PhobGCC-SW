@@ -49,6 +49,7 @@ void commitPtr(const Page* ptrToPage, const bool noLock = false) {
 	if(!noLock) {
 		multicore_lockout_start_blocking();
 	}
+    int pageSize = sizeof(Page);
     static_assert(sizeof(Page)<=FLASH_SECTOR_SIZE);
     uint32_t ints = save_and_disable_interrupts();
     uint8_t page[FLASH_SECTOR_SIZE];

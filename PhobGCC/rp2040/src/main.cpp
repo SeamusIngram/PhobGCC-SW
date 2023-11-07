@@ -754,7 +754,14 @@ int main() {
 		.pinA  = 0,
 		.pinB  = 0,
 		.pinZ  = 0,
-		.pinS  = 0
+		.pinS  = 0,
+		.pinLS = 0, // Shield Buttons
+		.pinMS = 0,
+		.pinCr = 0, // CPAD Buttons
+		.pinCu = 0,
+		.pinCl = 0,
+		.pinCd = 0,
+		.pinD  = 0 // DPAD button
 	};
 
 	_btn.A      =0;
@@ -812,12 +819,11 @@ int main() {
 	if(_hardware.S) { //hold start on powerup for BOOTSEL
 		reset_usb_boot(0, 0);
 	}
-
+	// commitSettings();
 	if(_hardware.Z) { //hold Z on powerup for PhobVision
 		_videoOut = true;
 		set_sys_clock_khz(1000*250, true);//overclock to 250 khz, to alleviate performance issues
 	}
-
 	multicore_lockout_victim_init();
 
 	multicore_launch_core1(second_core);

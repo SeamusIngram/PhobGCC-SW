@@ -85,6 +85,14 @@ struct Pins{
 	int pinB;
 	int pinZ;
 	int pinS;
+// Extra Buttons For Analog Shield Buttons, CPAD with DPAD Toggle Button
+	int pinLS;
+	int pinMS;
+	int pinCr;
+	int pinCu;
+	int pinCl;
+	int pinCd;
+	int pinD;
 };
 
 union Buttons{

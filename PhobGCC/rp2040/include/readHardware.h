@@ -53,6 +53,30 @@ void setPinModes() {
 	gpio_pull_up(_pinS);
 	gpio_set_dir(_pinS, GPIO_IN);
 
+// Analog Triggers
+	gpio_init(_pinLS);
+	gpio_pull_up(_pinLS);
+	gpio_set_dir(_pinLS, GPIO_IN);
+	gpio_init(_pinMS);
+	gpio_pull_up(_pinMS);
+	gpio_set_dir(_pinMS, GPIO_IN);
+// C Buttons
+	gpio_init(_pinCr);
+	gpio_pull_up(_pinCr);
+	gpio_set_dir(_pinCr, GPIO_IN);
+	gpio_init(_pinCu);
+	gpio_pull_up(_pinCu);
+	gpio_set_dir(_pinCu, GPIO_IN);
+	gpio_init(_pinCl);
+	gpio_pull_up(_pinCl);
+	gpio_set_dir(_pinCl, GPIO_IN);
+	gpio_init(_pinCd);
+	gpio_pull_up(_pinCd);
+	gpio_set_dir(_pinCd, GPIO_IN);
+// Dpad Button
+	gpio_init(_pinD);
+	gpio_pull_up(_pinD);
+	gpio_set_dir(_pinD, GPIO_IN);
 	/* the comms library sets this
 	gpio_init(_pinTx);
 	gpio_set_dir(_pinTx, GPIO_IN);
@@ -123,10 +147,17 @@ void readButtons(const Pins &, Buttons &hardware) {
 	hardware.R  = !gpio_get(_pinR);
 	hardware.Z  = !gpio_get(_pinZ);
 	hardware.S  = !gpio_get(_pinS);
+#ifndef DPAD_BUTTON
 	hardware.Dr = !gpio_get(_pinDr);
 	hardware.Du = !gpio_get(_pinDu);
 	hardware.Dl = !gpio_get(_pinDl);
 	hardware.Dd = !gpio_get(_pinDd);
+#else
+	hardware.Dr = !gpio_get(_pinD) & !gpio_get(_pinCr);
+	hardware.Du = !gpio_get(_pinD) & !gpio_get(_pinCu);
+	hardware.Dl = !gpio_get(_pinD) & !gpio_get(_pinCl);
+	hardware.Dd = !gpio_get(_pinD) & !gpio_get(_pinCd);
+#endif
 }
 
 void readADCScale(float &, float ) {
@@ -150,6 +181,89 @@ int readRa(const Pins &, const int initial, const float scale) {
 	}
 	return fmin(255, fmax(0, temp - initial) * scale);
 }
+
+void readAnalogTriggerButtons(const Pins &pin, Buttons &hardware){
+#ifdef MOD_SHIELD
+	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS) & !gpio_get(_pinLS)? 94 : !gpio_get(_pinLS)? 49: 0;
+#else
+	hardware.La = !gpio_get(_pinL)? 140: !gpio_get(_pinMS)? 94 : !gpio_get(_pinLS)? 49: 0;
+#endif
+	hardware.Ra = !gpio_get(_pinR)? 140 : 0;
+}
+
+void readCButtons(const Pins &, Buttons &hardware) {
+	bool readDown = hardware.Ay <= 105 ;
+	bool mod = !gpio_get(_pinMS);
+	bool cUp = !gpio_get(_pinCu);
+	bool cLeft = !gpio_get(_pinCl);
+	bool cVertical = !gpio_get(_pinCu) != !gpio_get(_pinCd);
+  bool cHorizontal = !gpio_get(_pinCl) != !gpio_get(_pinCr);
+	if (!gpio_get(_pinD)){
+		hardware.Cx = (uint8_t) 128;
+		hardware.Cy = (uint8_t) 128;
+	}
+	else if (cVertical & cHorizontal){
+		if (cLeft){
+			hardware.Cx = (uint8_t) 86;
+		}
+		else{
+			hardware.Cx = (uint8_t) 170;
+		}
+		if (cUp){
+			hardware.Cy = (uint8_t) 196;
+		}
+		else{
+			hardware.Cy = (uint8_t) 60;
+		}
+	} 
+	else if (cHorizontal){
+#ifdef MOD_SHIELD
+		if (mod){
+			if (readDown)
+				hardware.Cy = (uint8_t) 103;
+			else
+				hardware.Cy = (uint8_t) 153;
+			if (cLeft){
+				hardware.Cx = (uint8_t) 61;
+			}
+			else{
+				hardware.Cx = (uint8_t) 195;
+			}
+		}
+		else{
+			hardware.Cy = (uint8_t) 128;
+			if (cLeft){
+				hardware.Cx = (uint8_t) 0;
+			}
+			else{
+				hardware.Cx = (uint8_t) 255;
+			}
+		}
+#else
+		hardware.Cy = (uint8_t) 128;
+		if (cLeft){
+			hardware.Cx = (uint8_t) 0;
+		}
+		else{
+			hardware.Cx = (uint8_t) 255;
+		}
+#endif
+	} 
+	else if (cVertical){
+		hardware.Cx = (uint8_t) 128;
+		if (cUp){
+			hardware.Cy = (uint8_t) 255;
+		}
+		else{
+			hardware.Cy = (uint8_t) 0;
+		}
+	} 
+  else{
+		hardware.Cx = (uint8_t) 128;
+		hardware.Cy = (uint8_t) 128;
+	}
+}
+
 
 /*
 //for external MCP3002 adc, 10 bit

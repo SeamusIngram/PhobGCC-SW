@@ -1,7 +1,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#define DEBUG_ENABLED 0
+#define DEBUG_ENABLED 1
 
 inline void debug_print(const char* str) {
 #if (DEBUG_ENABLED)
