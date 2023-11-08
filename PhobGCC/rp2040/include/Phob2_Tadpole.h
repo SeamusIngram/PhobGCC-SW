@@ -44,9 +44,9 @@ const int _pinCr = 26;
 const int _pinCu = 27;
 const int _pinCl = 22;
 const int _pinCd = 20;
-const int _pinD = 8;
+const int _pinD = 0;
 const int _pinLS = 7;
-const int _pinMS = -1;
+const int _pinMS = 8;
 //GPIO SPI for ADCs
 const int _pinSPIclk = 18;
 const int _pinSPItx  = 19;
