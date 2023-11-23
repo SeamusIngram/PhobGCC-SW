@@ -13,9 +13,9 @@
 #define ANALOG_TRIGGER_BUTTONS
 #endif
 
-#ifndef MOD_SHIELD
-#define MOD_SHIELD
-#endif
+// #ifndef MOD_SHIELD
+// #define MOD_SHIELD
+// #endif
 
 #ifndef C_BUTTONS
 #define C_BUTTONS
@@ -35,7 +35,7 @@ const int _pinR =  3;
 const int _pinX =  4;
 const int _pinY =  5;
 const int _pinZ =  6;
-const int _pinS =  9;
+const int _pinS =  1;
 const int _pinRumble = -1;
 const int _pinBrake = -1;
 const int _pinTX  = 28;
